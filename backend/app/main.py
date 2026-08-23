@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from backend.app.database.session import Base, engine, SessionLocal
 from backend.app.services.db_service import seed_db
 from backend.app.api.router import router as api_router
@@ -32,8 +35,23 @@ app.add_middleware(
 )
 
 # Mount Routes
-app.include_api_router = app.include_router(api_router, prefix="/api")
+app.include_router(api_router, prefix="/api")
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to ARES Supply Chain Resilience Engine API Gateway. View docs at /docs"}
+# Serve React App (if built)
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "frontend_dist")
+
+if os.path.exists(frontend_dist):
+    # Mount assets (Vite puts JS/CSS here)
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+    
+    # Catch-all route to serve index.html for React Router
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        file_path = os.path.join(frontend_dist, full_path)
+        if os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(frontend_dist, "index.html"))
+else:
+    @app.get("/")
+    def read_root():
+        return {"message": "Welcome to ARES Supply Chain Resilience Engine API Gateway. View docs at /docs"}

@@ -1,16 +1,24 @@
-FROM python:3.11-slim
+# Stage 1: Build the React frontend
+FROM node:20-alpine as frontend-builder
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
 
-# Set the working directory
+# Stage 2: Build the FastAPI backend
+FROM python:3.11-slim
 WORKDIR /code
 
-# Copy the requirements file
+# Copy requirements and install
 COPY backend/requirements.txt /code/requirements.txt
-
-# Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Copy the backend code
+# Copy backend code
 COPY backend /code/backend
+
+# Copy the built React app from Stage 1 to a frontend_dist directory inside the backend
+COPY --from=frontend-builder /app/dist /code/frontend_dist
 
 # Hugging Face Spaces requires the app to run on port 7860
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "7860"]
