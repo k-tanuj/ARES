@@ -20,5 +20,9 @@ COPY backend /code/backend
 # Copy the built React app from Stage 1 to a frontend_dist directory inside the backend
 COPY --from=frontend-builder /app/dist /code/frontend_dist
 
+# Expose the port for Back4App and Hugging Face
+EXPOSE 7860
+
 # Hugging Face Spaces requires the app to run on port 7860
 CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+
